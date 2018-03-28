@@ -20,13 +20,15 @@ feature_rgb <- function(img_dir, export=T){
   bBin <- seq(0, 1, length.out=nB)
   mat=array()
   freq_rgb=array()
-  rgb_feature=matrix(nrow=3000, ncol=nR*nG*nB)
+  img_names = list.files(img_dir)
+  img_n = length(img_names)
+  rgb_feature=matrix(nrow=img_n, ncol=nR*nG*nB)
   
   n_files <- length(list.files(img_dir))
   
   ### extract RGB features
-  for (i in 1:3000){
-    mat <- imageData(readImage(paste0(img_dir, sprintf("%04.f",i), ".jpg")))
+  for (i in 1:img_n){
+    mat <- imageData(readImage(paste0(img_dir, img_names[i])))
     mat_as_rgb <-array(c(mat,mat,mat),dim = c(nrow(mat),ncol(mat),3))
     freq_rgb <- as.data.frame(table(factor(findInterval(mat_as_rgb[,,1], rBin), levels=1:nR), 
                                     factor(findInterval(mat_as_rgb[,,2], gBin), levels=1:nG),
@@ -39,7 +41,7 @@ feature_rgb <- function(img_dir, export=T){
   
   ### output RGB features
   if(export){
-    saveRDS(rgb_feature, file = "../output/rgb_feature_new3.RData")
+    save(rgb_feature, file = "../output/rgb_feature_new3.RData")
   }
   return(data.frame(rgb_feature))
 }
