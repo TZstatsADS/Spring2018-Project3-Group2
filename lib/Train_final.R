@@ -1,10 +1,10 @@
 ### Train a classification model with training images
 
 ## GBM
-gbm_train<- function(dat_train, par=NULL){
+gbm_train<- function(dat_train, label_train, par=NULL){
   library("gbm")
   if(is.null(par)){
-    depth <- 3
+    depth <- 7
   } else {
     depth <- par$depth
   }
@@ -37,9 +37,9 @@ gbm_para <- function(dat_train, label_train, model_values, run.cv){
   return(par_best)
 }
 
-## xgboost
+## XGBoost
 library(xgboost)
-# Tuning parameters using cross-validation
+# Tuning parameters "maximum depth" & "eta (shrinkage)" using cross-validation
 xgb_para <- function(dat_train,label_train,K,nround) {
   dtrain <-  xgb.DMatrix(data=data.matrix(dat_train),label=label_train)
   max_depth<-c(2, 3, 4, 5)
@@ -52,7 +52,8 @@ xgb_para <- function(dat_train,label_train,K,nround) {
       my.params <- list(max_depth = max_depth[i], eta = eta[j], nrounds=nround)
       set.seed(10)
       cv.output <- xgb.cv(data = dtrain, max_depth = my.params$max_depth, 
-                          eta = my.params$eta, gamma = 0, subsample = 0.5, nrounds = nround, objective = "multi:softprob", num_class = 3,
+                          eta = my.params$eta, gamma = 0, subsample = 0.5, nrounds = nround, 
+                          objective = "multi:softprob", num_class = 3,
                           nfold = K, nthread = 2, metrics = "merror", verbose = 0)
       
       if (is.null(evaluation_dat) == FALSE) {
@@ -75,6 +76,29 @@ xgb_para <- function(dat_train,label_train,K,nround) {
     }
   }
   return(list(evaluation_dat, best_params, best_err))
+}
+
+# Tuninng parameter "nrounds (M)" 
+xgb.set.M <- function(dat_train, label_tain, M.range = c(100, 280), max_depth=3, eta=0.3, step = 10, K = 5) {
+  nround <- seq(M.range[1], M.range[2], by = step)
+  best_err <- Inf 
+  best_M <- NA
+  
+  for (i in 1:length(nround)) {
+    set.seed(10)
+    cv.output <- xgb_cv(data.train = dat_train, label.train = label_train ,max_depth = max_depth, 
+                        eta = eta, gamma = 0, subsample = 0.5, nrounds = nround[i],
+                        objective = "multi:softprob", num_class = 3,
+                        nfold = K, nthread = 2, print = F)
+    min_err <- mean(cv.output)
+    
+    if (min_err < best_err){
+      best_M <- nround[i]
+      best_err <- min_err
+    }
+    print(list(min_err, best_M, best_err))
+  }
+  return(list(best_M, best_err))
 }
 
 

@@ -12,10 +12,10 @@ gbm_test<- function(fit_train, dat_test){
 
 
 ## XGBoost
-xgb_test<- function(model, x){
+xgb_test<- function(xgb_fit, dat_test){
   
   library("xgboost")
-  pred <- predict(model, as.matrix(x))
+  pred <- predict(xgb_fit, as.matrix(dat_test))
   pred <- matrix(pred, ncol=3, byrow=TRUE)
   pred_labels <- max.col(pred) - 1
   return(pred_labels)
