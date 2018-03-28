@@ -1,0 +1,171 @@
+---
+title: "Project 3-Dogs, Fried Chicken or Blueberry Muffins?"
+author: 'Group2'
+date: "March 21, 2018"
+output:
+  html_notebook: default
+---
+
+
+### Step 0: Prepare all needed packages
+```{r, warning=FALSE}
+need.packages <- c("gbm","EBImage","xgboost","OpenImageR", "dplyr", "grDevices", "ggplot2")
+new.packages <- need.packages[!(need.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages))
+  {
+   install.packages(new.packages)
+   source("https://bioconductor.org/biocLite.R")
+   biocLite("EBImage")
+  }
+library("gbm")
+library("xgboost")
+library("EBImage")
+library("xgboost")
+library("OpenImageR")
+library("dplyr")
+library("grDevices")
+library("ggplot2")
+```
+
+
+### Step 1: Set up controls for evaluation experiments.
+
+In this chunk, ,we have a set of controls for the evaluation experiments. 
+
++ (T/F) cross-validation on the training set
++ (number) K, the number of CV folds
++ (T/F) process features for training set
++ (T/F) run evaluation on an independent test set
++ (T/F) process features for test set
+
+```{r}
+run.feature = TRUE
+run.cv = TRUE    
+run.feature.train = TRUE    
+run.feature.test = TRUE 
+```
+
+
+### Step 2: Construct new visual features
+
+```{r}
+source("../lib/feature_all.R")
+img_dir<- "../data/train/images/" # The fold with training images
+
+if(run.feature.train)
+{
+  tm_rgb <- system.time(rgb_feature <- feature_rgb(img_dir, export=TRUE))
+}
+cat("Time for constructing RGB feature is ", tm_rgb[3], "s \n")
+
+if(run.feature.train)
+{
+  tm_hog <- system.time(hog_feature <- feature_hog(img_dir, export=TRUE))
+}
+cat("Time for constructing HOG feature is ", tm_hog[3], "s \n")
+
+sift_train <- read.csv("../data/train/SIFT_train.csv", header = F) # Load SIFT features
+sift_train <- sift_train[, -1]
+ 
+if(run.feature.train)
+{
+  tm_pca_sift <- system.time(pca_sift_feature <- feature_pca(sift_train))
+}
+cat("Time for constructing resized SIFT feature is ", tm_pca_sift[3], "s \n")
+```
+
+
+### Step 3: Models Training and Parameters Selection
+
+Training Gradient Boosting Model using SIFT features (baseline) by cross validation.
+
+```{r}
+source("../lib/Train_final.R")
+source("../lib/Test.R")
+source("../lib/CV.R")
+```
+
+#### Baseline Model: GBM & SIFT features
+
+* Choice for parameter values
+Using cross validation to find the best depth parameter for Gradient Boosting Model (GBM) on SIFT features.
+```{r}
+label_train <- read.csv("../data/train/label_train.csv", header = T)
+```
+
+* Fit the best GBM on entire training SIFT
+
+```{r}
+tm_gbm.sift=NA
+
+if(run.feature.train){
+  tm_gbm.sift<- system.time(fit_gbm.sift <- gbm.fit(x = data.frame(sift_train),   
+                                                    y = label_train[ , 3],
+                     n.trees = 800,
+                     distribution = "multinomial",
+                     interaction.depth = 7, 
+                     bag.fraction = 0.5,
+                     verbose = FALSE))
+}
+cat("Time for training the best GBM on SIFT features is ", tm_gbm.sift[3], "s \n")
+```
+
+#### Prefer Model: XGBoost
+#### Prefer Features: SIFT (PC) + RGB + HoG features
+
+##### Train XGBoost & SIFT (PC) + RGB + HoG features using best parameters obtained from Cross-validation
+
+```{r}
+rsh_train <- cbind(rgb_feature, hog_feature, pca_sift_feature)
+tm_xgb.rsh <- NA
+
+if(run.feature.train){
+best_para<-list(max_depth = 3, eta = 0.3, nrounds = 150, gamma = 0,
+                nthread = 2, subsample = 0.5,
+                objective = "multi:softprob", num_class = 3)
+xgbst.train <- xgb.DMatrix(data = data.matrix(rsh_train), label = label_train[ ,3] - 1)
+tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgboost(data=xgbst.train, params = best_para, nrounds = best_para$nrounds, verbose = 0))
+}
+cat("Time for training the best XGBoost on SIFT (PC) + RGB + HoG features is ", tm_xgb.rsh[3], "s \n")
+```
+
+### Step 4: Extract Features from Testing Data
+```{r feature}
+source("../lib/feature_all.R")
+img_dir_test<- "../data/test/images/" # The fold with testing images
+
+if(run.feature.test)
+{
+  tm_rgb_test <- system.time(rgb_feature_test <- feature_rgb(img_dir_test, export=TRUE))
+}
+cat("Time for constructing RGB feature is ", tm_rgb_test[3], "s \n")
+
+if(run.feature.test)
+{
+  tm_hog_test <- system.time(hog_feature_test <- feature_hog(img_dir_test, export=TRUE))
+}
+cat("Time for constructing hog feature is ", tm_hog_test[3], "s \n")
+ 
+if(run.feature.test)
+{
+  tm_pca_sift_test <- system.time(pca_sift_feature_test <- feature_pca(sift_feature_test))
+}
+cat("Time for constructing resized SIFT feature is ", tm_pca_sift_test[3], "s \n")
+
+rsh_test <- cbind(rgb_feature_test, hog_feature_test, pca_sift_feature_test)
+```
+
+### Step 5: Make Prediction on Testing Data
+#### Baseline Model: Fit the best GBM model on testing SIFT features
+```{r}
+source("../lib/Test.R")
+gbm.sift.test <- gbm_test(fit_gbm.sift, sift_feature_test) # need to be provided 
+error_gbm <- mean(gbm.sift.test != label_test)
+```
+
+
+#### Final Model: Fit the best XGBoost model on testing SIFT (PC) + RGB + HoG features
+```{r}
+xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_train)
+error_xgb <- mean(xgb.rsh.test != label_test - 1)
+```
