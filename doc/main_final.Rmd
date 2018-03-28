@@ -190,6 +190,7 @@ if (ncol(label_test) != 1) {
   label_test <- as.numeric(as.character(label_test))
 }
 
-xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test)
+xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test) + 1
 error_xgb <- mean(xgb.rsh.test != label_test - 1)
 ```
+
