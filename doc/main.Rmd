@@ -75,18 +75,18 @@ if(run.feature.train)
 cat("Time for constructing HOG feature is ", tm_hog[3], "s \n")
 
 # sift
-sift_train <- read.csv("../data/train/SIFT_train.csv", header = F) # Load SIFT features
-sift_train <- sift_train[, -1]
+train.sift <- read.csv("../data/train/SIFT_train.csv", header = F) # Load SIFT features
+train.sift <- train.sift[, -1]
 
 # sift(PC)
 if(run.feature.train)
 {
-  tm_pca_sift <- system.time(pca_sift_feature <- feature_pca(sift_train))
+  tm_pca_sift <- system.time(pca_sift_feature <- feature_pca(train.sift))
 }
 cat("Time for constructing resized SIFT feature is ", tm_pca_sift[3], "s \n")
 
 # sift(PC) + rgb + hog
-rsh_train <- cbind(rgb_feature, hog_feature, pca_sift_feature)
+train.rsh <- cbind(rgb_feature, hog_feature, pca_sift_feature)
 
 ```
 
@@ -95,7 +95,16 @@ rsh_train <- cbind(rgb_feature, hog_feature, pca_sift_feature)
 
 ```{r}
 # labels of training data
-label_train <- read.csv("../data/train/label_train.csv", header = T)
+train.label <- read.csv("../data/train/label_train.csv", header = T)
+
+#subsetting
+test_d <- sample(1:nrow(rsh_train), 750)
+rsh_train <- train.rsh[-test_d, ]
+sift_train <- train.sift[-test_d, ]
+label_train <- train.label[-test_d, ]
+rsh_test <- train.rsh[test_d, ]
+label_test <- train.label[test_d, ]
+sift_test <- train.sift[test_d, ]
 ```
 
 #### Baseline Model: GBM
@@ -125,51 +134,14 @@ Train XGBoost & SIFT (PC) + RGB + HoG features using best parameters obtained fr
 tm_xgb.rsh <- NA
 
 if(run.feature.train){
-tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgb_train(dat_train, label_train))
+tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgb_train(rsh_train, label_train))
 }
 cat("Time for training the best XGBoost on SIFT (PC) + RGB + HoG features is ", tm_xgb.rsh[3], "s \n")
 ```
 
-### Step 4: Extract Features from Testing Data
-```{r}
-img_dir_test<- "../data/test/images/" # The fold with testing images
 
-# rgb
-if(run.feature.test)
-{
-  tm_rgb_test <- system.time(rgb_feature_test <- feature_rgb(img_dir_test, export=FALSE))
-}
-cat("Time for constructing RGB feature is ", tm_rgb_test[3], "s \n")
 
-# hog
-if(run.feature.test)
-{
-  tm_hog_test <- system.time(hog_feature_test <- feature_hog(img_dir_test, export=TRUE))
-}
-cat("Time for constructing hog feature is ", tm_hog_test[3], "s \n")
- 
-# sift
-sift_test <- read.csv("../data/test/SIFT_test.csv", header = F) # Load test SIFT features
-sift_test <- sift_test[, -1]
-
-# sift(PC)
-if(run.feature.test)
-{
-  tm_pca_sift_test <- system.time(pca_sift_feature_test <- feature_pca(sift_test))
-}
-cat("Time for constructing resized SIFT feature is ", tm_pca_sift_test[3], "s \n")
-
-# sift(PC) + rgb + hog
-rsh_test <- cbind(rgb_feature_test, hog_feature_test, pca_sift_feature_test)
-```
-
-### Step 5: Make Prediction on Testing Data
-
-```{r}
-# labels of test data
-label_test <- read.csv("../data/test/label_test.csv", header = T)
-```
-
+### Step 4: Make Prediction on Testing Data
 #### Baseline Model: Fit the best GBM model on testing SIFT features
 ```{r}
 if (ncol(label_test) != 1) {
@@ -178,8 +150,9 @@ if (ncol(label_test) != 1) {
   label_test <- as.numeric(as.character(label_test))
 }
 
-gbm.sift.test <- gbm_test(fit_gbm.sift, sift_feature_test) # need to be provided 
+gbm.sift.test <- gbm_test(fit_gbm.sift, sift_test) # need to be provided 
 error_gbm <- mean(gbm.sift.test != label_test)
+cat("The prediction error on baseline model is ", error_gbm, "s \n")
 ```
 
 #### Final Model: Fit the best XGBoost model on testing SIFT (PC) + RGB + HoG features
@@ -192,4 +165,6 @@ if (ncol(label_test) != 1) {
 
 xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test)
 error_xgb <- mean(xgb.rsh.test != label_test - 1)
+cat("The prediction error on the final model is ", error_xgb, "s \n")
+
 ```
