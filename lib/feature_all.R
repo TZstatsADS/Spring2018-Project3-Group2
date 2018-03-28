@@ -12,9 +12,9 @@ feature_rgb <- function(img_dir, export=T){
   library("EBImage")
   library(grDevices)
   ### Define the b=number of R, G and B
-  nR <- 6
-  nG <- 16
-  nB <- 16 
+  nR <- 10
+  nG <- 14
+  nB <- 14 
   rBin <- seq(0, 1, length.out=nR)
   gBin <- seq(0, 1, length.out=nG)
   bBin <- seq(0, 1, length.out=nB)

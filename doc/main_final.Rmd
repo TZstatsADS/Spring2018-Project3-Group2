@@ -123,11 +123,7 @@ Train XGBoost & SIFT (PC) + RGB + HoG features using best parameters obtained fr
 tm_xgb.rsh <- NA
 
 if(run.feature.train){
-best_para<-list(max_depth = 3, eta = 0.3, nrounds = 150, gamma = 0,
-                nthread = 2, subsample = 0.5,
-                objective = "multi:softprob", num_class = 3)
-xgbst.train <- xgb.DMatrix(data = data.matrix(rsh_train), label = label_train[ ,3] - 1)
-tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgboost(data = xgbst.train, params = best_para, nrounds = best_para$nrounds, verbose = 0))
+tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgb_train(dat_train, label_train))
 }
 cat("Time for training the best XGBoost on SIFT (PC) + RGB + HoG features is ", tm_xgb.rsh[3], "s \n")
 ```
@@ -174,12 +170,24 @@ label_test <- read.csv("../data/test/label_test.csv", header = T)
 
 #### Baseline Model: Fit the best GBM model on testing SIFT features
 ```{r}
+if (ncol(label_test) != 1) {
+  label_test <- label_test[,3]
+} else {
+  label_test <- as.numeric(as.character(label_test))
+}
+
 gbm.sift.test <- gbm_test(fit_gbm.sift, sift_feature_test) # need to be provided 
 error_gbm <- mean(gbm.sift.test != label_test)
 ```
 
 #### Final Model: Fit the best XGBoost model on testing SIFT (PC) + RGB + HoG features
 ```{r}
+if (ncol(label_test) != 1) {
+  label_test <- label_test[,3]
+} else {
+  label_test <- as.numeric(as.character(label_test))
+}
+
 xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test)
 error_xgb <- mean(xgb.rsh.test != label_test - 1)
 ```

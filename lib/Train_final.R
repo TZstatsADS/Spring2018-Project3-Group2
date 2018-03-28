@@ -38,7 +38,17 @@ gbm_para <- function(dat_train, label_train, model_values, run.cv){
 }
 
 ## XGBoost
+xgb_train <- function(dat_train, label_train) {
 library(xgboost)
+best_para<-list(max_depth = 3, eta = 0.3, nrounds = 150, gamma = 0,
+                nthread = 2, subsample = 0.5,
+                objective = "multi:softprob", num_class = 3)
+xgbst.train <- xgb.DMatrix(data = data.matrix(dat_train), label = label_train[ ,3] - 1)
+fit_xgb <- xgboost(data = xgbst.train, params = best_para, 
+                      nrounds = best_para$nrounds, verbose = 0)
+  return(fit_xgb)
+}
+
 # Tuning parameters "maximum depth" & "eta (shrinkage)" using cross-validation
 xgb_para <- function(dat_train,label_train,K,nround) {
   dtrain <-  xgb.DMatrix(data=data.matrix(dat_train),label=label_train)
@@ -78,7 +88,7 @@ xgb_para <- function(dat_train,label_train,K,nround) {
   return(list(evaluation_dat, best_params, best_err))
 }
 
-# Tuninng parameter "nrounds (M)" 
+# Tuninng parameter "nrounds (M)" using cross-validation
 xgb.set.M <- function(dat_train, label_tain, M.range = c(100, 280), max_depth=3, eta=0.3, step = 10, K = 5) {
   nround <- seq(M.range[1], M.range[2], by = step)
   best_err <- Inf 
