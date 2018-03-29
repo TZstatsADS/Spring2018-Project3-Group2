@@ -38,18 +38,7 @@ gbm_para <- function(dat_train, label_train, model_values, run.cv){
 }
 
 ## XGBoost
-xgb_train <- function(dat_train, label_train) {
-library(xgboost)
-best_para<-list(max_depth = 3, eta = 0.3, nrounds = 150, gamma = 0,
-                nthread = 2, subsample = 0.5,
-                objective = "multi:softprob", num_class = 3)
-xgbst.train <- xgb.DMatrix(data = data.matrix(dat_train), label = label_train[ ,3] - 1)
-fit_xgb <- xgboost(data = xgbst.train, params = best_para, 
-                      nrounds = best_para$nrounds, verbose = 0)
-  return(fit_xgb)
-}
-
-# Tuning parameters "maximum depth" & "eta (shrinkage)" using cross-validation
+# Tune parameters "maximum depth" & "eta (shrinkage)" using cross-validation
 xgb_para <- function(dat_train,label_train,K,nround) {
   dtrain <-  xgb.DMatrix(data=data.matrix(dat_train),label=label_train)
   max_depth<-c(2, 3, 4, 5)
@@ -88,8 +77,12 @@ xgb_para <- function(dat_train,label_train,K,nround) {
   return(list(evaluation_dat, best_params, best_err))
 }
 
-# Tuninng parameter "nrounds (M)" using cross-validation
-xgb.set.M <- function(dat_train, label_tain, M.range = c(100, 280), max_depth=3, eta=0.3, step = 10, K = 5) {
+# Tune parameter "nrounds (M)" using cross-validation. Although large nrounds can make training error 
+##arbitrarily small but it tends to overfit data. According to ESL page 364, 
+## "A convenient way to estimate M is to monitor prediction risk as a function of M on a validation sample." 
+## Meaning that nrounds should be selected throught cross-validation.
+
+xgb.set.M <- function(dat_train, label_tain, M.range = c(80, 200), max_depth=3, eta=0.3, step = 10, K = 5) {
   nround <- seq(M.range[1], M.range[2], by = step)
   best_err <- Inf 
   best_M <- NA
@@ -111,6 +104,31 @@ xgb.set.M <- function(dat_train, label_tain, M.range = c(100, 280), max_depth=3,
   return(list(best_M, best_err))
 }
 
+# Train model
+xgb_train <- function(dat_train, label_train, tune = FALSE) {
+  library(xgboost)
+  
+  if (tune) {
+    params <- xgb_para(dat_train = dat_train, label_train = label_train, K = 5, nround = 200)
+    
+    param.round <- xgb.set.M(dat_train = dat_train, label_train = label_train, M.range = c(80, 200), 
+                             max_depth = params[[2]]$max_depth, eta = params[[2]]$eta, 
+                             step = 10, K = 5)
+    
+    best_para<-list(max_depth = params[[2]]$max_depth, eta = params[[2]]$eta, nrounds = param.round[[1]], 
+                    gamma = 0, nthread = 2, subsample = 0.5,
+                    objective = "multi:softprob", num_class = 3)
+  } else {
+    best_para<-list(max_depth = 3, eta = 0.3, nrounds = 150, gamma = 0,
+                    nthread = 2, subsample = 0.5,
+                    objective = "multi:softprob", num_class = 3)
+  }
+  
+  xgbst.train <- xgb.DMatrix(data = data.matrix(dat_train), label = label_train[ ,3] - 1)
+  fit_xgb <- xgboost(data = xgbst.train, params = best_para, 
+                     nrounds = best_para$nrounds, verbose = 0)
+  return(fit_xgb)
+}
 
 ## ADAboost
 library("adabag")
