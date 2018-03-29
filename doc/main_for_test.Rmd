@@ -125,7 +125,7 @@ Train XGBoost & SIFT (PC) + RGB + HoG features using best parameters obtained fr
 tm_xgb.rsh <- NA
 
 if(run.feature.train){
-tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgb_train(dat_train, label_train))
+tm_xgb.rsh <- system.time(fit_xgb_rsh <- xgb_train(dat_train, label))
 }
 cat("Time for training the best XGBoost on SIFT (PC) + RGB + HoG features is ", tm_xgb.rsh[3], "s \n")
 ```
@@ -180,17 +180,19 @@ if (ncol(label_test) != 1) {
 
 gbm.sift.test <- gbm_test(fit_gbm.sift, sift_feature_test) # need to be provided 
 error_gbm <- mean(gbm.sift.test != label_test)
+cat("The prediction error on baseline model is ", error_gbm)
 ```
 
 #### Final Model: Fit the best XGBoost model on testing SIFT (PC) + RGB + HoG features
 ```{r}
-if (ncol(label_test) != 1) {
-  label_test <- label_test[,3]
-} else {
-  label_test <- as.numeric(as.character(label_test))
-}
+# if (ncol(label_test) != 1) {
+#   label_test <- label_test[,3]
+# } else {
+#   label_test <- as.numeric(as.character(label_test))
+# }
 
-xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test) + 1
+xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test) 
 error_xgb <- mean(xgb.rsh.test != label_test - 1)
+cat("The prediction error on the final model is ", error_xgb)
 ```
 
