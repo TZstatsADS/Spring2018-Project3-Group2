@@ -1,0 +1,43 @@
+---
+title: "XGBoost CV results plot"
+output: html_notebook
+---
+
+```{r}
+source("../lib/Train_final.R")
+library(ggplot2)
+```
+
+# Set 'tune'
+```{r}
+# Set tune = TRUE is strongly not recommended since it takes forever to re-tune the parameters
+tune <- FALSE
+```
+
+# Plot
+```{r}
+if (tune) {
+  dat_train <- read.csv("../output/train_advanced_feature.csv")
+  label_train <- read.csv("../train/data/label_train.csv")
+  best_param_dat <- xgb_para(dat_train = dat_train,label_train = label_train,K = 5, nround = 200)
+} else {
+load("../output/best_parameter.RData")
+}
+
+
+best_param_log <- best_param_dat[[1]]
+cv_param_results <- ggplot(best_param_log) +
+  geom_line(mapping = aes(x = iter, y = test_merror_mean, col = parameter)) +
+  labs(x = "nrounds", y = "test error", title = "XGBoost parameter-tuning Cross-validation results")
+cv_param_results
+
+```
+
+# Save plot
+```{r}
+png("../figs/xgboost_results.png")
+cv_param_results
+dev.off()
+```
+
+

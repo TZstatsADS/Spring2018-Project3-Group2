@@ -39,7 +39,7 @@ gbm_para <- function(dat_train, label_train, model_values, run.cv){
 
 ## XGBoost
 # Tune parameters "maximum depth" & "eta (shrinkage)" using cross-validation
-xgb_para <- function(dat_train,label_train,K,nround) {
+xgb_para <- function(dat_train,label_train,K = 5,nround = 200) {
   dtrain <-  xgb.DMatrix(data=data.matrix(dat_train),label=label_train)
   max_depth<-c(2, 3, 4, 5)
   eta<-c(0.1, 0.2, 0.3, 0.4, 0.5)
@@ -74,7 +74,9 @@ xgb_para <- function(dat_train,label_train,K,nround) {
       }
     }
   }
-  return(list(evaluation_dat, best_params, best_err))
+  best_param_dat <- list(evaluation_dat, best_params, best_err)
+  save(best_param_dat, file = "../output/best_parameter.RDate")
+  return(best_param_dat)
 }
 
 # Tune parameter "nrounds (M)" using cross-validation. Although large nrounds can make training error 
