@@ -16,7 +16,7 @@ Term: Spring 2018
 	+ Xiaoxiao Guo
 	+ Yuehan Kong
 
-+ Project summary: In this project, we created a classification engine for images of dogs versus fried chicken versus blueberry muffins. Our baseline model is gbm with sift feature. Then, we tried hog, rgb, sift + hog, sift + lbp, sift + grey, rgb + hog, sift (PC) + rgb + hog eight kinds of features and choose sift (PC) + rgb + hog as the final feature. As for model, we tried gbm, adaBoost, xgBoost, logistic, svm (non-linear) these five models and choose xgBoost as the final model.  
++ Project summary: In this project, we created a classification engine for images of dogs versus fried chicken versus blueberry muffins. Our baseline model is gbm with sift feature. Then, we tried hog, rgb, sift + hog, sift + lbp, sift + grey, rgb + hog, sift (PC) + rgb + hog eight kinds of features and choose sift (PC) + rgb + hog as the final feature. As for model, we tried gbm, adaBoost, xgBoost, logistic regression, svm (non-linear) these five models and choose xgBoost as the final model.
 
 ![image](figs/error_rate.jpeg)
 
