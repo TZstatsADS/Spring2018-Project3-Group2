@@ -158,11 +158,11 @@ cat("The prediction error on baseline model is ", error_gbm, "s \n")
 
 #### Final Model: Fit the best XGBoost model on testing SIFT (PC) + RGB + HoG features
 ```{r}
-if (ncol(label_test) != 1) {
-  label_test <- label_test[,3]
-} else {
-  label_test <- as.numeric(as.character(label_test))
-}
+# if (ncol(label_test) != 1) {
+#   label_test <- label_test[,3]
+# } else {
+#   label_test <- as.numeric(as.character(label_test))
+# }
 
 xgb.rsh.test <- xgb_test(fit_xgb_rsh, rsh_test)
 error_xgb <- mean(xgb.rsh.test != label_test - 1)
